@@ -61,6 +61,8 @@ jobs:
       - name: Pull data with DVC
         run: dvc pull data/train_batch1.csv.dvc data/holdout.csv.dvc
       - name: Train model
+        env:
+          MLFLOW_TRACKING_URI: sqlite:///mlflow.db
         run: python src/train.py
       - name: Read report
         id: read_report

@@ -114,6 +114,23 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            sudo systemctl restart income-api
-            sleep 5
-            curl -sf http://localhost:8080/healthz && echo "Health check passed." || exit 1
+            if ! sudo systemctl restart income-api; then
+              sudo systemctl status income-api --no-pager || true
+              sudo journalctl -u income-api -n 50 --no-pager || true
+              exit 1
+            fi
+
+            attempt=1
+            while [ "$attempt" -le 12 ]; do
+              if curl -fsS http://localhost:8080/healthz; then
+                echo
+                echo "Health check passed."
+                exit 0
+              fi
+              sleep 5
+              attempt=$((attempt + 1))
+            done
+
+            sudo systemctl status income-api --no-pager || true
+            sudo journalctl -u income-api -n 50 --no-pager || true
+            exit 1

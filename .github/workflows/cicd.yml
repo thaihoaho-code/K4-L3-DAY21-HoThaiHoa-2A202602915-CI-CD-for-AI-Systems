@@ -16,6 +16,8 @@ jobs:
     name: Unit Test
     runs-on: ubuntu-latest
     steps:
+      - name: Workflow trigger smoke check
+        run: echo "Income Model CI/CD started for $GITHUB_REF"
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:

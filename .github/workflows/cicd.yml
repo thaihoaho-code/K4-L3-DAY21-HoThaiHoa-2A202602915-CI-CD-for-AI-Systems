@@ -39,9 +39,25 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Authenticate to Cloud Storage
+        env:
+          STORAGE_CREDENTIALS: ${{ secrets.STORAGE_CREDENTIALS }}
         run: |
-          echo '${{ secrets.STORAGE_CREDENTIALS }}' > /tmp/sa-key.json
-          echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa-key.json" >> $GITHUB_ENV
+          python - <<'PYEOF'
+          import json
+          import os
+          from pathlib import Path
+
+          credentials = os.environ["STORAGE_CREDENTIALS"]
+          parsed = json.loads(credentials)
+          if parsed.get("type") != "service_account":
+              raise ValueError("STORAGE_CREDENTIALS must contain a service account JSON key")
+
+          key_path = Path(os.environ["GITHUB_WORKSPACE"]) / "sa-key.json"
+          key_path.write_text(credentials)
+          with open(os.environ["GITHUB_ENV"], "a") as env_file:
+              env_file.write(f"GOOGLE_APPLICATION_CREDENTIALS={key_path}\n")
+          PYEOF
+          dvc remote modify --local labstore credentialpath "$GITHUB_WORKSPACE/sa-key.json"
       - name: Pull data with DVC
         run: dvc pull data/train_batch1.csv.dvc data/holdout.csv.dvc
       - name: Train model
